@@ -1,0 +1,29 @@
+---
+- name: Ensure directory exists for local self-signed TLS certs.
+  file:
+    path: /etc/wok
+    state: directory
+
+- name: Generate an OpenSSL private key.
+  openssl_privatekey:
+    path: /etc/wok/wok-key.pem
+
+- name: Generate an OpenSSL CSR.
+  openssl_csr:
+    path: /etc/wok/wok-csr.pem
+    privatekey_path: /etc/wok/wok-key.pem
+    common_name: "{{ vhostname }}"
+
+- name: Generate DH Parameters with a different size (2048 bits)
+  openssl_dhparam:
+    path: /etc/wok/dhparams.pem
+    size: 2048
+
+- name: Generate a Self Signed OpenSSL certificate.
+  openssl_certificate:
+    path: /etc/wok/wok-cert.pem
+    privatekey_path: /etc/wok/wok-key.pem
+    csr_path: /etc/wok/wok-csr.pem
+    provider: selfsigned
+  notify:
+  - restart nginx

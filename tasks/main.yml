@@ -1,0 +1,59 @@
+---
+
+- apt:
+    upgrade: yes
+    update_cache: yes
+    cache_valid_time: 86400 #One day
+
+- name: install packages
+  apt:
+    name: ['git', 'virtualenv', 'python-virtualenv', 'python-dev', 'python-lxml', 'libvirt-dev', 'zlib1g-dev', 'libxslt1-dev', 'nginx', 'supervisor', 'libsasl2-modules', 'gcc', 'pkg-config', 'python-guestfs']
+    state: latest
+
+- name: clone wok hit repo
+  git:
+    repo: https://github.com/retspen/webvirtcloud.git
+    dest: /srv/webvirtcloud
+
+- name: cp config file
+  command: cp /srv/webvirtcloud/webvirtcloud/settings.py.template /srv/webvirtcloud/webvirtcloud/settings.py
+
+- name: "put secret on config file"
+  lineinfile:
+    dest: /srv/webvirtcloud/webvirtcloud/settings.py
+    regexp: '^#?SECRET_KEY'
+    line: SECRET_KEY = '{{ secret }}'
+
+- name: cp configs files
+  command: cp /srv/webvirtcloud/conf/supervisor/webvirtcloud.conf  /etc/supervisor/conf.d/
+
+- name: cp configs files
+  command: cp /srv/webvirtcloud/conf/nginx/webvirtcloud.conf /etc/nginx/conf.d/
+
+- name: Recursively change ownership of /srv/webvirtcloud
+  file:
+    path: /srv/webvirtcloud
+    state: directory
+    recurse: yes
+    owner: www-data
+    group: www-data
+
+- name: Run a venv script
+  script: template/script.sh
+  args:
+    chdir: /srv/webvirtcloud
+
+- name: Recursively change ownership of /srv/webvirtcloud
+  file:
+    path: /srv/webvirtcloud
+    state: directory
+    recurse: yes
+    owner: www-data
+    group: www-data
+  notify: restart supervisor
+
+- name: Delete default vhost
+  file:
+    state: absent
+    path: "/etc/nginx/sites-enabled/default"
+  notify: restart nginx
