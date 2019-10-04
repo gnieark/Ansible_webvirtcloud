@@ -10,25 +10,33 @@
     name: ['git', 'virtualenv', 'python-virtualenv', 'python-dev', 'python-lxml', 'libvirt-dev', 'zlib1g-dev', 'libxslt1-dev', 'nginx', 'supervisor', 'libsasl2-modules', 'gcc', 'pkg-config', 'python-guestfs']
     state: latest
 
+
+- import_tasks: selfsignedcert.yml
+
+
 - name: clone wok hit repo
   git:
     repo: https://github.com/retspen/webvirtcloud.git
     dest: /srv/webvirtcloud
+  register: git_result
+  changed_when: "git_result.after|default('after') != git_result.before|default('before')"
+
 
 - name: cp config file
   command: cp /srv/webvirtcloud/webvirtcloud/settings.py.template /srv/webvirtcloud/webvirtcloud/settings.py
+  when: git_result.changed
+
 
 - name: "put secret on config file"
   lineinfile:
     dest: /srv/webvirtcloud/webvirtcloud/settings.py
     regexp: '^#?SECRET_KEY'
     line: SECRET_KEY = '{{ secret }}'
+  when: git_result.changed
 
 - name: cp configs files
   command: cp /srv/webvirtcloud/conf/supervisor/webvirtcloud.conf  /etc/supervisor/conf.d/
-
-- name: cp configs files
-  command: cp /srv/webvirtcloud/conf/nginx/webvirtcloud.conf /etc/nginx/conf.d/
+  when: git_result.changed
 
 - name: Recursively change ownership of /srv/webvirtcloud
   file:
@@ -37,11 +45,15 @@
     recurse: yes
     owner: www-data
     group: www-data
+  when: git_result.changed
 
 - name: Run a venv script
   script: template/script.sh
   args:
     chdir: /srv/webvirtcloud
+  when: git_result.changed
+
+ 
 
 - name: Recursively change ownership of /srv/webvirtcloud
   file:
@@ -51,9 +63,31 @@
     owner: www-data
     group: www-data
   notify: restart supervisor
+  
+- name: create a certkey file for WS
+  command: cat {{ ssl_private_key_path }} {{ ssl_cert_path }} > {{  ssl_cert_directory }}/certkey.pem
+  args: 
+    creates: {{  ssl_cert_directory }}/certkey.pem
+
+- name: "change WS_CERT cert file"
+    lineinfile:
+    dest: /srv/webvirtcloud/webvirtcloud/settings.py
+    regexp: '^#?WS_CERT'
+    line: "WS_CERT='{{  ssl_cert_directory }}/certkey.pem'"
+  notify:
+  - restart supervisor
 
 - name: Delete default vhost
   file:
     state: absent
     path: "/etc/nginx/sites-enabled/default"
   notify: restart nginx
+
+
+- name: Set nginx config
+  template:
+    src: templates/nginx.conf
+    dest: "/etc/nginx/sites-enabled/webvirtcloud.conf"
+  notify: restart nginx
+
+

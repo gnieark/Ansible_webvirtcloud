@@ -1,2 +1,8 @@
 ---
-secret: 0PMJHl8gmjOCfhB5QowQiUEXKbUOwDLJKFztEcq3
+secret: 0PMJHl8swgfvcdzsfcKUgvnwDLJKFztEcq3
+generate_self_signed_sertificates: true
+hostname: webvirtcloud.local
+ssl_cert_directory: /etc/nginx/ssl
+ssl_private_key_path: /etc/nginx/ssl/key.pem
+ssl_cert_path: /etc/nginx/ssl/cert.pem
+ssl_dhparams_path: /etc/nginx/ssl/dhparams.pem

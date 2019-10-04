@@ -1,29 +1,39 @@
 ---
-- name: Ensure directory exists for local self-signed TLS certs.
+- name: Ensure directory exists for TLS certs.
   file:
-    path: /etc/wok
+    path: {{ ssl_cert_directory }}
     state: directory
+  when: {{generate_self_signed_sertificates}}
 
 - name: Generate an OpenSSL private key.
   openssl_privatekey:
-    path: /etc/wok/wok-key.pem
+    path: {{ ssl_private_key_path }}
+  when: {{generate_self_signed_sertificates}}
 
 - name: Generate an OpenSSL CSR.
   openssl_csr:
-    path: /etc/wok/wok-csr.pem
-    privatekey_path: /etc/wok/wok-key.pem
+    path: /root/csr.pem
+    privatekey_path: {{ ssl_private_key_path }}
     common_name: "{{ vhostname }}"
+  when: {{generate_self_signed_sertificates}}
 
-- name: Generate DH Parameters with a different size (2048 bits)
+- name: Generate DH Parameters
   openssl_dhparam:
-    path: /etc/wok/dhparams.pem
+    path: {{ ssl_dhparams_path }}
     size: 2048
+  when: {{generate_self_signed_sertificates}}
 
 - name: Generate a Self Signed OpenSSL certificate.
   openssl_certificate:
-    path: /etc/wok/wok-cert.pem
-    privatekey_path: /etc/wok/wok-key.pem
-    csr_path: /etc/wok/wok-csr.pem
+    path: {{ ssl_cert_path }}
+    privatekey_path: {{ ssl_private_key_path }}
+    csr_path: /root/csr.pem
     provider: selfsigned
+  when: {{generate_self_signed_sertificates}}
   notify:
   - restart nginx
+
+- name: Delete the csr
+  file:
+    state: absent
+    path: /root/csr.pem
