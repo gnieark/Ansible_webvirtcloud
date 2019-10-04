@@ -67,10 +67,10 @@
 - name: create a certkey file for WS
   command: cat {{ ssl_private_key_path }} {{ ssl_cert_path }} > {{  ssl_cert_directory }}/certkey.pem
   args: 
-    creates: {{  ssl_cert_directory }}/certkey.pem
+    creates: "{{ ssl_cert_directory }}/certkey.pem"
 
 - name: "change WS_CERT cert file"
-    lineinfile:
+  lineinfile:
     dest: /srv/webvirtcloud/webvirtcloud/settings.py
     regexp: '^#?WS_CERT'
     line: "WS_CERT='{{  ssl_cert_directory }}/certkey.pem'"
