@@ -7,11 +7,12 @@
 
 - name: install packages
   apt:
-    name: ['git', 'virtualenv', 'python-virtualenv', 'python-dev', 'python-lxml', 'libvirt-dev', 'zlib1g-dev', 'libxslt1-dev', 'nginx', 'supervisor', 'libsasl2-modules', 'gcc', 'pkg-config', 'python-guestfs']
+    name: ['git', 'virtualenv', 'python-virtualenv', 'python-dev', 'python-lxml', 'libvirt-dev', 'zlib1g-dev', 'libxslt1-dev', 'nginx', 'supervisor', 'libsasl2-modules', 'gcc', 'pkg-config', 'python-guestfs', 'python-openssl']
     state: latest
 
 
 - import_tasks: selfsignedcert.yml
+  when: generate_self_signed_cert
 
 
 - name: clone wok hit repo
@@ -48,7 +49,7 @@
   when: git_result.changed
 
 - name: Run a venv script
-  script: template/script.sh
+  script: templates/script.sh
   args:
     chdir: /srv/webvirtcloud
   when: git_result.changed
@@ -65,7 +66,7 @@
   notify: restart supervisor
   
 - name: create a certkey file for WS
-  command: cat {{ ssl_private_key_path }} {{ ssl_cert_path }} > {{  ssl_cert_directory }}/certkey.pem
+  shell: "cat {{ ssl_private_key_path }} {{ ssl_cert_path }} > {{  ssl_cert_directory }}/certkey.pem"
   args: 
     creates: "{{ ssl_cert_directory }}/certkey.pem"
 

@@ -3,25 +3,18 @@
   file:
     path: "{{ ssl_cert_directory }}"
     state: directory
-  when: "{{ generate_self_signed_sertificates }}"
 
 - name: Generate an OpenSSL private key.
   openssl_privatekey:
     path: "{{ ssl_private_key_path }}"
-  when: "{{ generate_self_signed_sertificates }}"
+  register: new_key
 
 - name: Generate an OpenSSL CSR.
   openssl_csr:
     path: /root/csr.pem
     privatekey_path: "{{ ssl_private_key_path }}"
-    common_name: "{{ vhostname }}"
-  when: "{{ generate_self_signed_sertificates }}"
-
-- name: Generate DH Parameters
-  openssl_dhparam:
-    path: "{{ ssl_dhparams_path }}"
-    size: 2048
-  when: "{{ generate_self_signed_sertificates }}"
+    common_name: "{{ hostname }}"
+  when: new_key.changed
 
 - name: Generate a Self Signed OpenSSL certificate.
   openssl_certificate:
@@ -29,7 +22,7 @@
     privatekey_path: "{{ ssl_private_key_path }}"
     csr_path: /root/csr.pem
     provider: selfsigned
-  when: "{{ generate_self_signed_sertificates }}"
+  when: new_key.changed
   notify:
   - restart nginx
 
